@@ -1,0 +1,25 @@
+{
+  "site_name": "医療事務用語ドリル",
+  "tagline": "医療事務の仕事と資格の勉強で使う用語を、無料で覚える単語帳",
+  "description": "医療保険のしくみ・公費負担医療と介護保険・診療報酬・レセプトと窓口の仕事・医学の基礎・カルテの略語・医療に関する法律の用語を、カード・4択クイズ・書いて答える問題・分野別ミニテスト・略語クイズで覚えられる無料の単語帳サイトです。",
+  "base_url": "https://iryo.yogo-drill.com",
+  "sisters": [
+    {
+      "name": "簿記用語ドリル",
+      "url": "https://boki.yogo-drill.com",
+      "desc": "簿記3級・2級の用語"
+    },
+    {
+      "name": "ITパスポート用語ドリル",
+      "url": "https://ip.yogo-drill.com",
+      "desc": "ITパスポート試験の用語"
+    }
+  ],
+  "operator": "Yuki-fe",
+  "contact": "https://forms.gle/s4yB1xMbcoRqZps2A",
+  "established": "2026-10-19",
+  "google_analytics_id": "",
+  "adsense_client": "",
+  "amazon_associate": false,
+  "affiliate_html": ""
+}
