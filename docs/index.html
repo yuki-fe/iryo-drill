@@ -14,8 +14,9 @@
 <meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Zen+Maru+Gothic:wght@400;500;700&family=JetBrains+Mono:wght@500&display=swap">
 <link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/layout.css">
 <link rel="icon" href="favicon.ico" sizes="48x48">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -24,41 +25,58 @@
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebSite", "name": "医療事務用語ドリル", "url": "https://iryo.yogo-drill.com/", "description": "医療保険のしくみ・公費負担医療と介護保険・診療報酬・レセプトと窓口の仕事・医学の基礎・カルテの略語・医療に関する法律の用語を、カード・4択クイズ・書いて答える問題・分野別ミニテスト・略語クイズで覚えられる無料の単語帳サイトです。"}</script>
 </head>
 <body class="home" data-root="">
+<a class="skip" href="#content">本文へ移動</a>
 <header class="site-head">
-  <a class="brand" href="index.html">医療事務用語ドリル</a>
-  <nav class="site-nav" aria-label="サイト内">
-    <a href="index.html">用語ドリル</a>
-    <a href="test.html">ミニテスト</a>
-    <a href="abbr.html">略語</a>
-    <a href="terms/index.html">用語一覧</a>
-    <a href="about.html">このサイトについて</a>
-  </nav>
+  <div class="site-head-in">
+    <a class="brand" href="index.html"><img src="favicon.svg" alt="" width="28" height="28">医療事務用語ドリル</a>
+    <nav class="site-nav" aria-label="サイト内">
+      <a href="index.html" aria-current="page">用語ドリル</a><a href="test.html">ミニテスト</a><a href="abbr.html">略語</a><a href="terms/index.html">用語一覧</a><a href="about.html">このサイトについて</a>
+    </nav>
+  </div>
 </header>
+<div id="content"></div>
 
-<div class="home-features">
-  <a class="home-feature" href="test.html"><span class="tag">ミニテスト</span><b>7つの分野から20問。分野ごとの正答率がわかる</b><span class="go">挑戦する →</span></a>
-  <a class="home-feature" href="abbr.html"><span class="tag">略語</span><b>Rp・do・BP・CRP…カルテの略語35語のクイズと早見表</b><span class="go">覚える →</span></a>
-</div>
-<div class="app">
-  <aside class="side">
-    <div>
-      <p class="label">学び方</p>
-      <nav class="modes" role="tablist" id="modes" aria-label="学び方"></nav>
+<section class="hero" aria-labelledby="hero-h">
+  <div class="hero-text">
+    <p class="hero-eyebrow">医療事務の用語を覚える・無料</p>
+    <h1 id="hero-h"><span>医療事務の用語を、</span><span>すきま時間に。</span><br><span>カルテの略語も、</span><span>クイズで覚える。</span></h1>
+    <p class="hero-lead">医療保険のしくみ、診療報酬、レセプト、カルテの略語など、医療事務の仕事と勉強で使う用語178語を、単語帳とクイズで覚えられます。登録は要りません。</p>
+    <div class="hero-cta">
+      <a class="btn primary" href="#study">用語を覚えはじめる</a>
+      <a class="btn" href="test.html">ミニテストに挑戦</a>
     </div>
-    <div>
-      <p class="label">分野と覚えた数</p>
-      <div class="fields" id="fields"></div>
-    </div>
+    <ul class="hero-stats" aria-label="収録の数">
+      <li><b class="mono">178</b><span>用語</span></li>
+      <li><b class="mono">35</b><span>略語</span></li>
+      <li><b class="mono">7</b><span>分野</span></li>
+    </ul>
+  </div>
+  <aside class="hero-progress" aria-labelledby="prog-h">
+    <h2 id="prog-h">あなたの進み具合</h2>
+    <p class="hero-progress-sub">分野を押すと、その分野だけで学習します</p>
+    <div class="fields" id="fields"></div>
+    <p class="save-note">進み具合はこのブラウザに保存されます。<button id="reset" type="button">リセット</button></p>
   </aside>
-  <main class="main">
+</section>
+
+<section class="study" id="study" aria-labelledby="study-h">
+  <div class="study-head">
+    <h2 id="study-h" class="sec-title">学習する</h2>
+    <nav class="modes" role="tablist" id="modes" aria-label="学び方"></nav>
+  </div>
+  <div class="study-body">
     <div class="toolbar" id="toolbar"></div>
     <section class="panel" id="panel"><noscript><p class="empty">この学習機能を使うには JavaScript を有効にしてください。<a href="terms/index.html">用語一覧</a>はそのまま読めます。</p></noscript></section>
-    <p class="save-note">進み具合はこのブラウザに保存されます。<button id="reset" type="button">進み具合をリセット</button></p>
-  </main>
-</div>
+  </div>
+</section>
+
+<section class="features" aria-labelledby="feat-h">
+  <h2 id="feat-h" class="sec-title">できること</h2>
+  <div class="feat-grid"><a class="feat" href="#study"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="14" height="14" rx="2"/><path d="M7 2h12a2 2 0 0 1 2 2v12"/></svg><b>単語帳とクイズ</b><span>178語をカード・4択・書いて答えるで。間違えた用語だけを復習できます。</span><em>学習を始める →</em></a><a class="feat" href="test.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg><b>ミニテスト</b><span>7つの分野から20問。分野ごとの正答率がわかる。</span><em>挑戦する →</em></a><a class="feat" href="abbr.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7V5h16v2"/><path d="M9 20h6"/><path d="M12 5v15"/></svg><b>略語クイズ</b><span>Rp・do・BP・CRP…カルテの略語35語のクイズと早見表。</span><em>覚える →</em></a><a class="feat" href="terms/index.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><b>用語一覧</b><span>分野・小分類ごとに全部の用語を一覧で。1語ずつ解説ページがあります。</span><em>一覧を見る →</em></a></div>
+</section>
 
 <section class="prose home-intro">
-  <h1>医療事務用語ドリル<small>医療事務の仕事と資格の勉強で使う用語を、無料で覚える単語帳</small></h1>
+  <h2 class="intro-title">医療事務用語ドリルについて<small>医療事務の仕事と資格の勉強で使う用語を、無料で覚える単語帳</small></h2>
   <p>医療事務の仕事と、医療事務の資格の勉強で使う用語を、178語収録しています。医療保険のしくみ、公費負担医療と介護保険、診療報酬、レセプトと窓口の仕事、医学の基礎、カルテの略語、医療に関する法律まで、はじめて医療事務を学ぶ人にも分かるように、やさしい言葉で説明しています。登録は不要で、スマホでもパソコンでも無料で使えます。</p>
   <h2>学び方</h2>
   <dl class="howto">
@@ -90,6 +108,7 @@
   <p>当サイトは、医療事務の資格の試験の実施団体や、医療機関・行政機関とは関係のない個人の学習サイトです。医療保険や診療報酬の制度は改定されることがあります。実際の業務では、最新の告示・通知や、勤務先の決まりを確認してください。</p>
   <p>© 2026 Yuki-fe</p>
 </footer>
+<script>if (/^#(card|quiz|type|review|list)$/.test(location.hash)) addEventListener("load", () => document.getElementById("study").scrollIntoView());</script>
 <script src="assets/terms.js"></script>
 <script src="assets/app.js"></script>
 </body>
