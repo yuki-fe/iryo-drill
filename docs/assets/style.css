@@ -266,3 +266,73 @@ button:focus-visible, input:focus-visible, a:focus-visible, .card:focus-visible 
   .home-features { grid-template-columns: 1fr; padding-inline: 16px; }
   .abbr-table td:last-child { min-width: 14em; }
 }
+
+/* ---------- 用語タイピング（typing.html。用語ドリルの各サイトで同じ） ---------- */
+#typing { position: relative; margin: 20px 0 32px; min-width: 0; max-width: 100%; }
+.ty-view { background: var(--paper); border: 1.5px solid var(--line); border-radius: 12px; padding: 24px; min-height: 340px; }
+.ty-input { position: absolute; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; font-size: 16px; border: 0; padding: 0; }
+.ty-menu { display: flex; flex-direction: column; gap: 10px; }
+.ty-menu .label { margin: 8px 0 0; }
+.ty-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ty-mode { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--bg); text-align: left; cursor: pointer; }
+.ty-mode small { color: var(--muted); font-size: .8rem; line-height: 1.4; }
+.ty-mode[aria-pressed="true"] { border-color: var(--mark); background: var(--mark-soft); }
+.ty-mode[aria-pressed="true"] b { color: var(--mark); }
+.ty-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.ty-chip { padding: 6px 14px; border: 1.5px solid var(--line); border-radius: 999px; background: var(--bg); font-size: .88rem; cursor: pointer; }
+.ty-chip[aria-pressed="true"] { border-color: var(--mark); background: var(--mark); color: var(--paper); }
+.ty-best { margin: 8px 0 0; color: var(--muted); }
+.ty-best b { color: var(--ink); }
+.ty-start { align-self: flex-start; padding-inline: 28px; }
+.ty-bar { display: flex; gap: 20px; font-size: .9rem; color: var(--muted); }
+.ty-bar b { color: var(--ink); font-size: 1.15rem; }
+.ty-time { height: 4px; background: var(--line); border-radius: 2px; margin: 8px 0 20px; overflow: hidden; }
+.ty-time i { display: block; height: 100%; background: var(--mark); transition: width .2s linear; }
+.ty-word { text-align: center; }
+.ty-word p { margin: 0; }
+.ty-sub { font-size: .78rem; color: var(--muted); }
+.ty-term { font-family: var(--f-display); font-weight: 700; font-size: clamp(1.4rem, 6vw, 2.4rem); overflow-wrap: anywhere; line-height: 1.3; margin-top: 4px !important; }
+.ty-kana { font-size: 1.15rem; margin-top: 6px !important; letter-spacing: .04em; overflow-wrap: anywhere; }
+.ty-roma { font-family: var(--f-mono); font-size: 1.25rem; color: var(--muted); margin-top: 2px !important; letter-spacing: .06em; overflow-wrap: anywhere; min-height: 1.6em; }
+.ty-kana .done, .ty-roma .done { color: var(--mark); }
+.ty-kana .hint { color: var(--ok); }
+.ty-desc { margin-top: 18px !important; color: var(--muted); font-size: .92rem; text-align: left; border-top: 1px dashed var(--line); padding-top: 12px; }
+.ty-desc.big { color: var(--ink); font-size: 1.05rem; border: 0; padding: 0; margin: 12px 0 14px !important; }
+/* 意味も打つ: 用語を打ち終わったあとの画面 */
+.ty-term-done { font-size: clamp(1.1rem, 4.5vw, 1.6rem); color: var(--muted); }
+.ty-check { color: var(--ok); margin-left: 8px; font-size: .8em; }
+.ty-part { display: inline-block; margin-top: 10px !important; padding: 1px 12px; border-radius: 999px; background: var(--mark); color: var(--paper); font-size: .78rem; font-weight: 700; }
+.ty-imi { font-family: var(--f-display); font-weight: 700; font-size: clamp(1.2rem, 5vw, 1.9rem); line-height: 1.4; margin-top: 6px !important; overflow-wrap: anywhere; }
+.ty-next { font-size: .78rem; color: var(--muted); margin-top: 6px !important; }
+.ty-missed li { flex-wrap: wrap; }
+.ty-missed .ty-m { flex-basis: 100%; color: var(--muted); font-size: .78rem; }
+.ty-keys { display: flex; justify-content: center; gap: 10px; margin-top: 16px !important; }
+.ty-keys .btn { padding: 6px 14px; font-size: .85rem; }
+p.ty-keys.muted { display: none; }
+.ty-passed { text-align: center; color: var(--muted); margin: -8px 0 12px; font-size: .9rem; }
+.ty-play.f-ng .ty-view, .ty-play.f-ng { animation: ty-shake .2s; }
+.ty-play.f-ng .ty-roma { color: var(--mark); }
+@keyframes ty-shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+.ty-result { text-align: center; }
+.ty-mode-name { color: var(--muted); margin: 0; }
+.ty-new { color: var(--mark); font-weight: 700; font-size: 1.1rem; margin: 4px 0 0; }
+.ty-total { margin: 12px 0 0; display: flex; justify-content: center; align-items: baseline; gap: 8px; }
+.ty-total b { font-size: 3.2rem; line-height: 1.1; color: var(--mark); font-weight: 500; }
+.ty-total small { color: var(--muted); }
+.ty-score { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 28px; margin: 16px 0; }
+.ty-score div { min-width: 90px; }
+.ty-score dt { font-size: .78rem; color: var(--muted); }
+.ty-score dd { margin: 0; font-family: var(--f-mono); font-size: 1.8rem; font-weight: 500; }
+.ty-score small { font-family: var(--f-body); font-size: .8rem; margin-left: 2px; }
+.ty-result h2 { font-size: 1rem; margin: 20px 0 8px; }
+.ty-missed { list-style: none; padding: 0; margin: 0 auto; max-width: 520px; text-align: left; columns: 2; column-gap: 24px; }
+.ty-missed li { break-inside: avoid; display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--line); padding: 4px 0; font-size: .9rem; }
+.ty-missed span { color: var(--muted); font-size: .8rem; }
+.ty-again { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 20px; }
+@media (hover: none) { p.ty-keys.muted { display: flex; } }
+@media (max-width: 600px) {
+  .ty-view { padding: 16px; }
+  .ty-modes { grid-template-columns: 1fr; }
+  .ty-missed { columns: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .ty-play.f-ng { animation: none; } }

@@ -28,6 +28,11 @@ BASE = config["base_url"].rstrip("/")
 SITE = config["site_name"]
 SISTERS = config.get("sisters", [])
 TODAY = date.today().isoformat()
+# 用語の読み（タイピングで打つ文字）。用語 id → ひらがな・英数字
+YOMI = json.loads((ROOT / "data" / "yomi.json").read_text(encoding="utf-8")) if (ROOT / "data" / "yomi.json").exists() else {}
+# 意味の要点（タイピングの「意味も打つ」で打つ）。用語 id → [画面に出す文, 打つ読み]
+IMI = {k: v for k, v in json.loads((ROOT / "data" / "imi.json").read_text(encoding="utf-8")).items() if not k.startswith("_")} \
+    if (ROOT / "data" / "imi.json").exists() else {}
 ABBRS = [t for t in terms if t.get("abbr")]
 
 
@@ -81,7 +86,7 @@ SITEMAP = []  # page() で書き出したページの URL（sitemap.xml に載�
 
 
 # ---------- レイアウト（FE用語ドリルと同じ形。見た目は static/assets/layout.css） ----------
-NAV = [('index.html', '用語ドリル'), ('test.html', 'ミニテスト'), ('abbr.html', '略語'), ('terms/index.html', '用語一覧'), ('about.html', 'このサイトについて')]
+NAV = [('index.html', '用語ドリル'), ('test.html', 'ミニテスト'), ('abbr.html', '略語'), ('terms/index.html', '用語一覧'), ('typing.html', 'タイピング'), ('about.html', 'このサイトについて')]
 
 
 def nav_links(path, rel):
@@ -100,6 +105,7 @@ ICONS = {
     "layers": '<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>',
     "list": '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
     "pencil": '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+    "keyboard": '<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>',
 }
 
 
@@ -246,7 +252,7 @@ def build_home():
 
 <section class="features" aria-labelledby="feat-h">
   <h2 id="feat-h" class="sec-title">できること</h2>
-  <div class="feat-grid"><a class="feat" href="#study">{icon("cards")}<b>単語帳とクイズ</b><span>{len(terms)}語をカード・4択・書いて答えるで。間違えた用語だけを復習できます。</span><em>学習を始める →</em></a><a class="feat" href="test.html">{icon("target")}<b>ミニテスト</b><span>7つの分野から{n_test}問。分野ごとの正答率がわかる。</span><em>挑戦する →</em></a><a class="feat" href="abbr.html">{icon("type")}<b>略語クイズ</b><span>Rp・do・BP・CRP…カルテの略語{len(ABBRS)}語のクイズと早見表。</span><em>覚える →</em></a><a class="feat" href="terms/index.html">{icon("list")}<b>用語一覧</b><span>分野・小分類ごとに全部の用語を一覧で。1語ずつ解説ページがあります。</span><em>一覧を見る →</em></a></div>
+  <div class="feat-grid"><a class="feat" href="#study">{icon("cards")}<b>単語帳とクイズ</b><span>{len(terms)}語をカード・4択・書いて答えるで。間違えた用語だけを復習できます。</span><em>学習を始める →</em></a><a class="feat" href="test.html">{icon("target")}<b>ミニテスト</b><span>7つの分野から{n_test}問。分野ごとの正答率がわかる。</span><em>挑戦する →</em></a><a class="feat" href="abbr.html">{icon("type")}<b>略語クイズ</b><span>Rp・do・BP・CRP…カルテの略語{len(ABBRS)}語のクイズと早見表。</span><em>覚える →</em></a><a class="feat" href="typing.html">{icon("keyboard")}<b>用語タイピング</b><span>用語と意味を打って、手で覚えます。制限時間は30〜180秒から。</span><em>タイピングする →</em></a><a class="feat" href="terms/index.html">{icon("list")}<b>用語一覧</b><span>分野・小分類ごとに全部の用語を一覧で。1語ずつ解説ページがあります。</span><em>一覧を見る →</em></a></div>
 </section>
 
 <section class="prose home-intro">
@@ -260,6 +266,7 @@ def build_home():
     <dt>復習</dt><dd>「まだ」を押した用語や、クイズで間違えた用語だけを集めて、学習し直せます。</dd>
     <dt>ミニテスト</dt><dd>7つの分野から{n_test}問を出します。分野ごとの正答率がわかります。</dd>
     <dt>略語クイズ</dt><dd>Rp・do・p.o.・BP・CRP など、カルテや検査の略語の正式名と意味を覚えます。</dd>
+    <dt>用語タイピング</dt><dd>制限時間（30〜180秒）の中で、用語と意味の要点を打って覚えます。読みを見て打つ「練習」と、意味だけを見て用語を思い出して打つ「腕だめし」があります。</dd>
   </dl>
   <h2>収録している分野</h2>
   <p>医療事務の仕事で使う知識を、7つの分野に分けています。特定の試験の範囲に合わせたものではありませんが、医療事務の資格の勉強にも使えます。診療報酬の点数は、改定（原則2年に1度）で変わるので、このサイトでは点数を書かずに、しくみと用語の意味を説明しています。</p>
@@ -337,6 +344,7 @@ def build_term(t, prev, nxt):
         <h2>この用語を練習する</h2>
         <a class="btn primary" href="../index.html#card">{icon("cards")}カードで練習</a>
         <a class="btn" href="../index.html#type">{icon("pencil")}書いて答える</a>
+        <a class="btn" href="../typing.html">{icon("keyboard")}タイピングで覚える</a>
         <a class="btn" href="../test.html">{icon("target")}ミニテストに挑戦</a>
       </section>
       <section class="side-card">
@@ -435,6 +443,35 @@ def build_abbr():
          body, "", "", scripts='<script src="assets/terms.js"></script>\n<script src="assets/drill.js"></script>')
 
 
+def build_typing():
+    n = sum(1 for t in terms if YOMI.get(t["id"]))
+    body = f"""
+<main class="prose wide typing-page">
+  {crumbs("", ("用語タイピング", None))}
+  <h1>用語タイピング<small>医療事務の用語 {n}語を打って覚える</small></h1>
+  <div id="typing" data-fields='{escape(json.dumps(FIELDS, ensure_ascii=False))}'><noscript><p class="empty">タイピングを使うには JavaScript を有効にしてください。</p></noscript></div>
+  <section>
+    <h2>遊び方</h2>
+    <dl class="howto">
+      <dt>練習</dt><dd>用語・読み・意味が出ます。読みをローマ字で打ちます。打ちながら意味も目に入るので、用語と意味をいっしょに覚えられます。</dd>
+      <dt>腕だめし</dt><dd>意味だけが出ます。答えの用語を思い出して、読みを打ちます。Enter でヒント（1文字ずつ読みが出る）、Esc でパス。</dd>
+      <dt>意味も打つ</dt><dd>用語を打ったあとに、その用語の意味の要点（短い文）も打ちます。用語と意味を手で覚えられます。「しない」にすると、用語だけを打ちます。</dd>
+      <dt>制限時間</dt><dd>30秒・60秒・90秒・120秒・180秒から選べます。意味も打つときは、長めの時間がおすすめです。</dd>
+    </dl>
+    <ul>
+      <li>「し」は shi でも si でも、「ん」は n でも nn でも打てます。英語の略語（BP・CRP など）は、そのまま英字で打ちます。</li>
+      <li>ミスやパスをした用語は、終わったあとに意味といっしょに一覧で出ます。解説ページで確かめましょう。</li>
+      <li>スコアは、正しく打てた読みの文字数です（意味の文字も数えます。腕だめしのヒントで見た文字は数えません）。</li>
+      <li>自己ベストのスコアは、遊び方・分野・制限時間・意味も打つかどうかごとに、このブラウザに保存されます。</li>
+    </ul>
+  </section>
+</main>
+"""
+    page("typing.html", f"用語タイピング｜医療事務の用語を打って覚える｜{SITE}",
+         f"医療事務の用語{n}語で遊べるタイピング。読みを見て打つ練習と、意味から用語を思い出して打つ腕だめし。無料・登録不要。",
+         body, "", "", scripts='<script src="assets/terms.js"></script>\n<script src="assets/typing.js"></script>')
+
+
 def contact_html():
     c = config.get("contact", "").strip()
     if not c:
@@ -531,7 +568,8 @@ def build_meta_files():
     host = urlparse(BASE).hostname or ""
     if host and not host.endswith("github.io"):
         (OUT / "CNAME").write_text(host + "\n", encoding="utf-8")
-    data = [{"id": t["id"], "f": t["field"], "sub": t["sub"], "term": t["term"], "desc": t["desc"], **({"abbr": t["abbr"]} if t.get("abbr") else {})}
+    data = [{"id": t["id"], "f": t["field"], "sub": t["sub"], "term": t["term"], "desc": t["desc"], **({"abbr": t["abbr"]} if t.get("abbr") else {}),
+             **({"y": YOMI[t["id"]]} if YOMI.get(t["id"]) else {}), **({"mt": IMI[t["id"]][0], "my": IMI[t["id"]][1]} if IMI.get(t["id"]) else {})}
             for t in terms]
     (OUT / "assets" / "terms.js").write_text("window.SITE_TERMS = " + json.dumps(data, ensure_ascii=False) + ";\n"
                                              + "window.SITE_FIELDS = " + json.dumps(FIELDS, ensure_ascii=False) + ";\n"
@@ -559,6 +597,22 @@ def check():
             errors.append(f"{FIELDS[k]}の用語が少なすぎて、ミニテストを作れません")
     if len(ABBRS) < 4:
         errors.append("略語（abbr のある用語）が4語より少ないので、略語クイズを作れません")
+    # 読み（タイピング）。ひらがな・ー・半角英数字と / - . & ' だけ
+    for t in terms:
+        y = YOMI.get(t["id"])
+        if not y:
+            warnings.append(f"{t['id']} {t['term']} の読みが data/yomi.json にありません（タイピングに出ません）")
+        elif not re.fullmatch(r"[ぁ-ゖー0-9a-z/\-.&']+", y):
+            errors.append(f"{t['id']} {t['term']} の読みに使えない文字があります: {y}")
+    # 意味の要点（タイピングの「意味も打つ」）。読みは、用語の読みと同じ文字だけ
+    for t in terms:
+        m = IMI.get(t["id"])
+        if not m:
+            warnings.append(f"{t['id']} {t['term']} の意味の要点が data/imi.json にありません（「意味も打つ」では意味を飛ばします）")
+        elif len(m) != 2 or not m[0] or not re.fullmatch(r"[ぁ-ゖー0-9a-z/\-.&']+", m[1]):
+            errors.append(f"{t['id']} {t['term']} の意味の要点の形か読みがおかしい: {m}")
+    for k in set(IMI) - set(ids):
+        warnings.append(f"data/imi.json の {k} は、用語にない id です")
     if "YOUR-NAME" in BASE:
         warnings.append("config.json の base_url が仮の値のままです（公開するURLに変えてください）")
     if not config.get("operator"):
@@ -584,6 +638,7 @@ def main():
     for i, t in enumerate(terms):
         build_term(t, terms[i - 1] if i > 0 else None, terms[i + 1] if i + 1 < len(terms) else None)
     build_test()
+    build_typing()
     build_abbr()
     build_about()
     build_privacy()
