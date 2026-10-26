@@ -165,6 +165,7 @@ def page(path, title, desc, body, rel, body_class="", jsonld=None, scripts="", i
 {body}
 <footer class="site-foot">
   <nav aria-label="フッター">
+    <a href="https://yogo-drill.com/">用語ドリル（ほかの資格のサイト）</a>
     <a href="{rel}terms/index.html">用語一覧</a>
     <a href="{rel}about.html">運営者情報</a>
     <a href="{rel}privacy.html">プライバシーポリシー・免責事項</a>
