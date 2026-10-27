@@ -329,6 +329,34 @@ p.ty-keys.muted { display: none; }
 .ty-missed li { break-inside: avoid; display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--line); padding: 4px 0; font-size: .9rem; }
 .ty-missed span { color: var(--muted); font-size: .8rem; }
 .ty-again { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 20px; }
+/* 用語タイピングの点数とランク */
+.ty-grade { align-self: center; margin-left: 10px; min-width: 2.2em; padding: 2px 10px; border-radius: 8px; border: 2px solid var(--mark); color: var(--mark); font-family: var(--f-display); font-weight: 700; font-size: 1.6rem; line-height: 1.2; }
+.ty-grade.g-S { background: var(--mark); color: var(--paper); }
+.ty-grade.g-C, .ty-grade.g-D { border-color: var(--line); color: var(--muted); }
+.ty-formula { margin: 4px 0 0; }
+/* 用語タイピングのランキング */
+.ty-rank-link { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.ty-rank-link .btn { padding: 6px 14px; font-size: .85rem; }
+.ty-rank-note { margin: 8px 0 0; }
+.ty-rank-send { max-width: 520px; margin: 8px auto 0; padding: 14px 16px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--bg); display: flex; flex-wrap: wrap; justify-content: center; align-items: end; gap: 10px; }
+.ty-rank-send p { flex-basis: 100%; margin: 0; }
+.ty-rank-send b { color: var(--mark); font-size: 1.2rem; }
+.ty-rank-send label { display: flex; flex-direction: column; gap: 4px; font-size: .8rem; color: var(--muted); text-align: left; }
+.ty-name { font: inherit; font-size: 16px; width: 12em; max-width: 100%; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); }
+.ty-name:focus { outline: 2px solid var(--mark); outline-offset: 1px; }
+.ty-err { color: var(--mark); font-size: .88rem; }
+.ty-rankview h2 { font-size: 1.15rem; margin: 0 0 12px; }
+.ty-rankview h2 small { display: block; font-family: var(--f-body); font-size: .82rem; color: var(--muted); font-weight: 500; margin-top: 4px; }
+.ty-rank { list-style: none; padding: 0; margin: 14px 0 10px; }
+.ty-rank li { display: grid; grid-template-columns: 2.4em minmax(0, 1fr) auto auto; align-items: baseline; gap: 8px; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+.ty-rank li.me { background: var(--mark-soft); border-radius: 6px; }
+.ty-rank .no { font-family: var(--f-mono); color: var(--muted); text-align: right; }
+.ty-rank li:nth-child(-n+3) .no { color: var(--mark); font-weight: 700; }
+.ty-rank .nm { overflow-wrap: anywhere; }
+.ty-rank .nm small { margin-left: 6px; font-size: .72rem; color: var(--mark); }
+.ty-rank b { font-size: 1.1rem; font-weight: 500; }
+.ty-rank b small { font-family: var(--f-body); font-size: .75rem; margin-left: 2px; }
+.ty-rank li > small { color: var(--muted); font-size: .78rem; }
 @media (hover: none) { p.ty-keys.muted { display: flex; } }
 @media (max-width: 600px) {
   .ty-view { padding: 16px; }

@@ -2,7 +2,9 @@
    用語は terms.js（window.SITE_TERMS、FE は window.FE_TERMS、ITパスポートは window.IP_TERMS）の y（読み）を打つ。
    練習: 用語・読み・ローマ字・意味が出る。腕だめし: 意味だけを見て、用語を思い出して打つ。
    意味も打つ: 用語のあとに、意味の要点（terms.js の mt＝画面に出す文、my＝打つ読み）も打つ。データがないサイトでは出さない。
-   制限時間は TIMES から選ぶ。 */
+   制限時間は TIMES から選ぶ。
+   点数 = 文字数 × 正確さ³ × 10。ランク（S〜D）は1分あたりの点数で決める（GRADES）。
+   ランキング: #typing の data-rank（ranking/ranking.gs のウェブアプリの URL）と data-site があるときだけ出す。対象は BOARD の1つだけ。 */
 (function () {
   "use strict";
   const root = document.getElementById("typing");
@@ -14,7 +16,7 @@
     return;
   }
   const FIELDS = window.SITE_FIELDS || JSON.parse(root.dataset.fields || "{}");
-  const TIMES = [30, 60, 90, 120, 180];
+  const TIMES = [60, 120, 180];   // 1分・2分・3分
   const HAS_IMI = TERMS.some((t) => t.my);
   const REL = document.body.dataset.root || "";
 
@@ -84,8 +86,91 @@
 
   const fieldKeys = Object.keys(FIELDS).filter((f) => TERMS.some((t) => t.f === f));
   function pool() { return state.field === "all" ? TERMS : TERMS.filter((t) => t.f === state.field); }
-  // 自己ベストは、遊び方・分野・制限時間・意味も打つかごとに分ける（60秒・用語だけは、前からの名前のまま）
-  function bestKey() { return `typing-best-${state.mode}-${state.field}` + (state.sec !== 60 ? `-${state.sec}s` : "") + (state.imi ? "-imi" : ""); }
+  // 自己ベスト（点数）は、遊び方・分野・制限時間・意味も打つかごとに分ける。文字数で比べていたころの記録（typing-best-）とは別
+  function bestKey() { return `typing-pt-${state.mode}-${state.field}-${state.sec}s` + (state.imi ? "-imi" : ""); }
+
+  // ---------- 点数 ----------
+  // 点数 = 文字数 × 正確さ³ × 10。正確さ = 正しく打った数 ÷（正しく打った数 + ミス）。ranking.gs の points と同じ式
+  function accuracy() { return state.keys + state.miss ? state.keys / (state.keys + state.miss) : 0; }
+  function points() { return Math.round(state.score * Math.pow(accuracy(), 3) * 10); }
+  // ランクは1分あたりの点数で決める（制限時間が違っても同じ目安）
+  const GRADES = [["S", 2400], ["A", 1800], ["B", 1200], ["C", 700], ["D", 0]];
+  function grade(pt, sec) { const m = pt / (sec / 60); return GRADES.find(([, n]) => m >= n)[0]; }
+
+  // ---------- ランキング（data-rank に GAS の URL があるサイトだけ。「練習・意味も打つ・2分・すべて」だけ） ----------
+  const RANK_URL = HAS_IMI ? root.dataset.rank || "" : "", SITE_KEY = root.dataset.site || "";
+  const BOARD = { mode: "practice", imi: true, sec: 120, field: "all", key: "practice-120-imi", name: "練習・意味も打つ・2分・分野「すべて」" };
+  const rankOn = () => !!RANK_URL && state.mode === BOARD.mode && state.imi === BOARD.imi && state.sec === BOARD.sec && state.field === BOARD.field;
+  function useBoard() { state.mode = BOARD.mode; state.imi = BOARD.imi; state.sec = BOARD.sec; state.field = BOARD.field; }
+  // ブラウザごとのランダムな ID（自分の行に印を付ける・ベストを1つにまとめるため）
+  function playerId() {
+    let id = ""; try { id = localStorage.getItem("typing-pid") || ""; } catch (e) {}
+    if (!/^[a-z0-9-]{16,40}$/.test(id)) {
+      id = window.crypto && crypto.randomUUID ? crypto.randomUUID() : Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+      try { localStorage.setItem("typing-pid", id); } catch (e) {}
+    }
+    return id;
+  }
+  function savedName() { try { return localStorage.getItem("typing-name") || ""; } catch (e) { return ""; } }
+  const RANK_ERR = { name: "その名前は使えません（10文字まで。URL や人を傷つけることばは使えません）。", score: "この記録は受け付けられませんでした。",
+    wait: "少し待ってから、もう一度押してください。" };
+  const rank = { tab: "week", data: null, loading: false, error: "", sending: false, sent: null, sendError: "" };
+  function loadRank() {
+    rank.loading = true; rank.error = ""; rank.data = null; render();
+    fetch(`${RANK_URL}?site=${encodeURIComponent(SITE_KEY)}&board=${BOARD.key}`).then((r) => r.json()).then((d) => {
+      if (!d.ok) throw new Error(d.error);
+      rank.data = d;
+    }).catch(() => { rank.error = "ランキングを読み込めませんでした。時間をおいて、もう一度開いてください。"; })
+      .then(() => { rank.loading = false; if (state.phase === "rank") render(); });
+  }
+  function sendRank() {
+    const el = root.querySelector(".ty-name");
+    const name = (el ? el.value : "").trim();
+    if (!name) { rank.sendError = "ニックネームを入れてください。"; render(); return; }
+    try { localStorage.setItem("typing-name", name); } catch (e) {}
+    rank.sending = true; rank.sendError = ""; render();
+    // 点数は ranking.gs が文字数・打鍵・ミスから計算する
+    const body = { site: SITE_KEY, board: BOARD.key, pid: playerId(), name, chars: state.score, words: state.words, keys: state.keys, miss: state.miss };
+    fetch(RANK_URL, { method: "POST", body: JSON.stringify(body) }).then((r) => r.json()).then((d) => {
+      if (!d.ok) { rank.sendError = RANK_ERR[d.error] || "送れませんでした。"; return; }
+      rank.sent = d;
+      if (window.gtag) gtag("event", "typing_rank_send", { board: body.board, points: points() });
+    }).catch(() => { rank.sendError = "送れませんでした。ネットにつながっているか確かめて、もう一度押してください。"; })
+      .then(() => { rank.sending = false; if (state.phase === "result") render(); });
+  }
+  function rankHtml() {
+    const me = playerId().slice(0, 6);
+    const list = rank.data && rank.data[rank.tab];
+    const tabs = [["week", "今週"], ["all", "全期間"]].map(([k, v]) => `<button type="button" class="ty-chip" data-rtab="${k}" aria-pressed="${rank.tab === k}">${v}</button>`).join("");
+    const rows = !list ? "" : list.length ? `<ol class="ty-rank">${list.map((x, i, a) => {
+      const no = i && a[i - 1].points === x.points ? null : i + 1;
+      return `<li class="${x.pid === me ? "me" : ""}"><span class="no">${no || ""}</span><span class="nm">${esc(x.name)}${x.pid === me ? "<small>あなた</small>" : ""}</span>`
+        + `<b class="mono">${x.points}<small>点</small></b><small>${grade(x.points, BOARD.sec)}・${x.chars}文字・${x.acc}%</small></li>`;
+    }).join("")}</ol>` : `<p class="empty">${rank.tab === "week" ? "今週" : "まだ"}の記録はありません。1位をねらおう！</p>`;
+    return `<div class="ty-rankview">
+      <h2>ランキング<small>${esc(BOARD.name)}</small></h2>
+      <div class="ty-chips">${tabs}</div>
+      ${rank.loading ? '<p class="muted">読み込み中…</p>' : rank.error ? `<p class="ty-err">${esc(rank.error)}</p>` : rows}
+      <p class="muted">今週は月曜0時に新しくなります。上位20人まで出ます。</p>
+      <p class="ty-again"><button type="button" class="btn primary" data-act="rankstart">ランキングに挑戦</button><button type="button" class="btn" data-act="menu">もどる</button></p>
+    </div>`;
+  }
+  function sendHtml() {
+    if (!RANK_URL) return "";
+    if (!rankOn()) return `<p class="ty-rank-note muted">ランキングに載せられるのは「${esc(BOARD.name)}」で遊んだときだけです。</p>`;
+    if (!points()) return "";
+    if (rank.sent) {
+      const w = rank.sent.week, a = rank.sent.all;
+      const msg = w && a ? `今週 <b>${w.rank}位</b>（${w.of}人中）・全期間 <b>${a.rank}位</b>（${a.of}人中）` : "ランキングに送りました。";
+      return `<div class="ty-rank-send"><p>${msg}</p><button type="button" class="btn" data-act="rank">ランキングを見る</button></div>`;
+    }
+    return `<div class="ty-rank-send">
+      <label>ニックネーム<input class="ty-name" type="text" maxlength="10" autocomplete="nickname" value="${esc(savedName())}" placeholder="10文字まで"></label>
+      <button type="button" class="btn primary" data-act="send"${rank.sending ? " disabled" : ""}>${rank.sending ? "送っています…" : "ランキングに載せる"}</button>
+      ${rank.sendError ? `<p class="ty-err">${esc(rank.sendError)}</p>` : ""}
+      <p class="muted">本名や連絡先は入れないでください。ランキングに出るのはニックネームと点数・文字数・正確さです。</p>
+    </div>`;
+  }
 
   function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
@@ -212,30 +297,34 @@
       .map(([k, b, s]) => `<button type="button" class="ty-mode" data-mode="${k}" aria-pressed="${state.mode === k}"><b>${b}</b><small>${s}</small></button>`).join("");
     const imiBtns = [[true, "する"], [false, "しない（用語だけ）"]]
       .map(([v, s]) => `<button type="button" class="ty-chip" data-imi="${v ? 1 : 0}" aria-pressed="${state.imi === v}">${s}</button>`).join("");
-    const secBtns = TIMES.map((s) => `<button type="button" class="ty-chip" data-sec="${s}" aria-pressed="${state.sec === s}">${s}秒</button>`).join("");
+    const secBtns = TIMES.map((s) => `<button type="button" class="ty-chip" data-sec="${s}" aria-pressed="${state.sec === s}">${s / 60}分</button>`).join("");
     return `<div class="ty-menu">
       <p class="label">遊び方</p><div class="ty-modes">${modeBtns}</div>
       ${HAS_IMI ? `<p class="label">意味も打つ</p><div class="ty-chips">${imiBtns}</div>` : ""}
       <p class="label">制限時間</p><div class="ty-chips">${secBtns}</div>
       <p class="label">分野</p><div class="ty-chips">${fieldBtns}</div>
-      <p class="ty-best">${best && best.score ? `自己ベスト: <b>${best.score}文字</b>（${best.words}語）` : "まだ記録はありません"}</p>
+      <p class="ty-best">${best && best.points ? `自己ベスト: <b>${best.points}点</b>（ランク${grade(best.points, state.sec)}・${best.chars}文字・正確さ${best.acc}%）` : "まだ記録はありません"}</p>
+      ${RANK_URL ? `<p class="ty-rank-link"><button type="button" class="btn ghost" data-act="rank">ランキングを見る</button>${rankOn() ? '<span class="muted">この設定でランキングに挑戦できます</span>'
+        : `<button type="button" class="btn ghost" data-act="useboard">ランキングの設定にする</button><span class="muted">ランキングは「${esc(BOARD.name)}」だけです</span>`}</p>` : ""}
       <button type="button" class="btn primary ty-start" data-act="start">スタート（スペースキー）</button>
-      <p class="muted">${state.sec}秒で何語打てるか挑戦します。${state.imi ? "用語を打ったあとに、意味の要点も打ちます。" : ""}ローマ字入力は半角英数で打ってください（スマホは、ひらがなのキーボードでも打てます）。</p>
+      <p class="muted">${state.sec / 60}分で何語打てるか挑戦します。${state.imi ? "用語を打ったあとに、意味の要点も打ちます。" : ""}ローマ字入力は半角英数で打ってください（スマホは、ひらがなのキーボードでも打てます）。</p>
     </div>`;
   }
 
   function resultHtml() {
     const kps = (state.keys / state.sec).toFixed(1);
-    const acc = state.keys + state.miss ? Math.round((state.keys / (state.keys + state.miss)) * 100) : 0;
+    const acc = Math.round(accuracy() * 100), pt = points();
     const missed = TERMS.filter((t) => state.missedIds.has(t.id));
     const list = missed.map((t) => `<li><a href="${REL}terms/${t.id}.html">${esc(t.term)}</a><span>${esc(t.y)}</span>`
       + (t.mt ? `<small class="ty-m">${esc(t.mt)}</small>` : "") + `</li>`).join("");
     return `<div class="ty-result">
-      <p class="ty-mode-name">${state.mode === "practice" ? "練習" : "腕だめし"}・${esc(state.field === "all" ? "すべて" : FIELDS[state.field])}・${state.sec}秒${state.imi ? "・意味も打つ" : ""}</p>
+      <p class="ty-mode-name">${state.mode === "practice" ? "練習" : "腕だめし"}・${esc(state.field === "all" ? "すべて" : FIELDS[state.field])}・${state.sec / 60}分${state.imi ? "・意味も打つ" : ""}</p>
       ${state.newBest ? '<p class="ty-new">自己ベスト更新！</p>' : ""}
-      <p class="ty-total"><small>スコア</small><b class="mono">${state.score}</b><small>文字</small></p>
-      <dl class="ty-score"><div><dt>打てた用語</dt><dd>${state.words}<small>語</small></dd></div><div><dt>正しく打った数</dt><dd>${state.keys}<small>打鍵</small></dd></div>
+      <p class="ty-total"><b class="mono">${pt}</b><small>点</small><span class="ty-grade g-${grade(pt, state.sec)}">${grade(pt, state.sec)}</span></p>
+      <p class="ty-formula muted">${state.score}文字 × 正確さ${acc}%の3乗 × 10</p>
+      <dl class="ty-score"><div><dt>文字数</dt><dd>${state.score}<small>文字</small></dd></div><div><dt>打てた用語</dt><dd>${state.words}<small>語</small></dd></div><div><dt>正しく打った数</dt><dd>${state.keys}<small>打鍵</small></dd></div>
         <div><dt>ミス</dt><dd>${state.miss}<small>回</small></dd></div><div><dt>1秒あたり</dt><dd>${kps}<small>打鍵</small></dd></div><div><dt>正確さ</dt><dd>${acc}<small>%</small></dd></div></dl>
+      ${sendHtml()}
       ${missed.length ? `<h2>ミス・パスした用語（${missed.length}語）</h2><ul class="ty-missed">${list}</ul>` : ""}
       <p class="ty-again"><button type="button" class="btn primary" data-act="start">もう一度（スペースキー）</button><button type="button" class="btn" data-act="menu">遊び方・分野を変える</button></p>
     </div>`;
@@ -245,6 +334,7 @@
     let html;
     if (state.phase === "menu") html = menuHtml();
     else if (state.phase === "result") html = resultHtml();
+    else if (state.phase === "rank") html = rankHtml();
     else {
       const left = Math.max(0, Math.ceil(state.sec - (performance.now() - state.t0) / 1000));
       const pt = state.passed && state.passed.t;
@@ -252,7 +342,7 @@
         ? `<p class="ty-passed">${esc(pt.term)} の意味: <b>${esc(pt.mt)}</b></p>`
         : `<p class="ty-passed">答え: <b>${esc(pt.term)}</b>（${esc(pt.y)}）${pt.mt ? `… ${esc(pt.mt)}` : ""}</p>`;
       html = `<div class="ty-play ${state.flash ? "f-" + state.flash : ""}">
-        <div class="ty-bar"><span>残り <b class="mono ty-left">${left}</b> 秒</span><span>スコア <b class="mono">${state.score}</b></span><span><b class="mono">${state.words}</b> 語</span><span>ミス <b class="mono">${state.miss}</b></span></div>
+        <div class="ty-bar"><span>残り <b class="mono ty-left">${left}</b> 秒</span><span>点数 <b class="mono">${points()}</b></span><span><b class="mono">${state.words}</b> 語</span><span>ミス <b class="mono">${state.miss}</b></span></div>
         <div class="ty-time"><i style="width:${(left / state.sec) * 100}%"></i></div>
         ${passed}<div class="ty-word">${wordHtml()}</div>
         <p class="ty-keys muted">打つ欄が見えないときは、ここを押すとキーボードが出ます。</p>
@@ -264,6 +354,7 @@
   function start() {
     state.phase = "play"; state.deck = []; state.score = 0; state.words = 0; state.keys = 0; state.miss = 0; state.missedIds = new Set();
     state.newBest = false; state.passed = null; state.flash = "";
+    rank.sent = null; rank.sendError = ""; rank.sending = false;
     store("typing-pref", { mode: state.mode, field: state.field, sec: state.sec, imi: state.imi });
     nextWord(); state.t0 = performance.now();
     clearInterval(state.timer);
@@ -282,12 +373,12 @@
     clearInterval(state.timer);
     // 時間切れのときに打っていた用語も、ミスやヒントがあれば一覧に入れる
     if (state.cur && (state.wordMiss || state.hintTo)) state.missedIds.add(state.cur.t.id);
-    const best = load(bestKey(), null);
-    if (state.score && (!best || !best.score || state.score > best.score)) {
-      store(bestKey(), { score: state.score, words: state.words }); state.newBest = true;
+    const best = load(bestKey(), null), pt = points();
+    if (pt && (!best || !best.points || pt > best.points)) {
+      store(bestKey(), { points: pt, chars: state.score, words: state.words, acc: Math.round(accuracy() * 100) }); state.newBest = true;
     }
     state.phase = "result"; render();
-    if (window.gtag) gtag("event", "typing_finish", { mode: state.mode, field: state.field, seconds: state.sec, meaning: state.imi ? 1 : 0, words: state.words, score: state.score });
+    if (window.gtag) gtag("event", "typing_finish", { mode: state.mode, field: state.field, seconds: state.sec, meaning: state.imi ? 1 : 0, words: state.words, score: state.score, points: points() });
   }
 
   // ---------- 入力 ----------
@@ -299,9 +390,10 @@
   document.addEventListener("keydown", (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (state.phase !== "play") {
+      if (e.key === "Enter" && e.target.classList && e.target.classList.contains("ty-name")) { e.preventDefault(); if (!rank.sending) sendRank(); return; }
       const tag = e.target === input ? "" : e.target.tagName;
       if (e.key === " " && state.phase !== "play" && !/^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(tag)) {
-        e.preventDefault(); start();
+        e.preventDefault(); if (state.phase === "rank") useBoard(); start();
       }
       return;
     }
@@ -331,6 +423,11 @@
     else if (b.dataset.imi) { state.imi = b.dataset.imi === "1"; render(); }
     else if (b.dataset.act === "start") start();
     else if (b.dataset.act === "menu") { state.phase = "menu"; render(); }
+    else if (b.dataset.act === "useboard") { useBoard(); render(); }
+    else if (b.dataset.act === "rankstart") { useBoard(); start(); }
+    else if (b.dataset.act === "rank") { state.phase = "rank"; rank.tab = "week"; loadRank(); }
+    else if (b.dataset.rtab) { rank.tab = b.dataset.rtab; render(); }
+    else if (b.dataset.act === "send") sendRank();
     else if (b.dataset.act === "pass") { pass(); focusInput(); }
     else if (b.dataset.act === "hint") { hint(); focusInput(); }
   });
