@@ -2,7 +2,8 @@
    用語は terms.js（window.SITE_TERMS、FE は window.FE_TERMS、ITパスポートは window.IP_TERMS）の y（読み）を打つ。
    練習: 用語・読み・ローマ字・意味が出る。腕だめし: 意味だけを見て、用語を思い出して打つ。
    意味も打つ: 用語のあとに、意味の要点（terms.js の mt＝画面に出す文、my＝打つ読み）も打つ。データがないサイトでは出さない。
-   制限時間は TIMES から選ぶ。
+   制限時間は TIMES から選ぶ。始める前に 3・2・1 のカウントダウン。Esc でいつでもやめてメニューへ（記録は残さない）。
+   日本語入力（全角）のままでも打てる: キーの位置（e.code）から半角の文字に直し、日本語入力が作る文字は捨てる。
    点数 = 文字数 × 正確さ³ × 10。ランク（S〜D）は1分あたりの点数で決める（GRADES）。
    ランキング: #typing の data-rank（ranking/ranking.gs のウェブアプリの URL）と data-site があるときだけ出す。対象は BOARD の1つだけ。 */
 (function () {
@@ -94,7 +95,7 @@
   function accuracy() { return state.keys + state.miss ? state.keys / (state.keys + state.miss) : 0; }
   function points() { return Math.round(state.score * Math.pow(accuracy(), 3) * 10); }
   // ランクは1分あたりの点数で決める（制限時間が違っても同じ目安）
-  const GRADES = [["S", 2400], ["A", 1800], ["B", 1200], ["C", 700], ["D", 0]];
+  const GRADES = [["S", 1800], ["A", 1300], ["B", 900], ["C", 500], ["D", 0]];
   function grade(pt, sec) { const m = pt / (sec / 60); return GRADES.find(([, n]) => m >= n)[0]; }
 
   // ---------- ランキング（data-rank に GAS の URL があるサイトだけ。「練習・意味も打つ・2分・すべて」だけ） ----------
@@ -145,10 +146,10 @@
     const rows = !list ? "" : list.length ? `<ol class="ty-rank">${list.map((x, i, a) => {
       const no = i && a[i - 1].points === x.points ? null : i + 1;
       return `<li class="${x.pid === me ? "me" : ""}"><span class="no">${no || ""}</span><span class="nm">${esc(x.name)}${x.pid === me ? "<small>あなた</small>" : ""}</span>`
-        + `<b class="mono">${x.points}<small>点</small></b><small>${grade(x.points, BOARD.sec)}・${x.chars}文字・${x.acc}%</small></li>`;
+        + `<b class="mono">${x.points}<small>点</small></b><small>${x.site ? `${esc(x.site)}・` : ""}${grade(x.points, BOARD.sec)}・${x.chars}文字・${x.acc}%</small></li>`;
     }).join("")}</ol>` : `<p class="empty">${rank.tab === "week" ? "今週" : "まだ"}の記録はありません。1位をねらおう！</p>`;
     return `<div class="ty-rankview">
-      <h2>ランキング<small>${esc(BOARD.name)}</small></h2>
+      <h2>ランキング<small>${esc(BOARD.name)}・用語ドリルの全サイト共通</small></h2>
       <div class="ty-chips">${tabs}</div>
       ${rank.loading ? '<p class="muted">読み込み中…</p>' : rank.error ? `<p class="ty-err">${esc(rank.error)}</p>` : rows}
       <p class="muted">今週は月曜0時に新しくなります。上位20人まで出ます。</p>
@@ -264,7 +265,7 @@
         <p class="ty-imi">${esc(t.mt)}</p>
         ${kanaLine}
         <p class="ty-desc">${esc(t.desc)}</p>
-        ${state.mode === "test" ? '<p class="ty-keys"><button type="button" class="btn ghost" data-act="pass">パス（Esc）</button></p>' : ""}`;
+        ${state.mode === "test" ? '<p class="ty-keys"><button type="button" class="btn ghost" data-act="pass">パス（Tab）</button></p>' : ""}`;
     }
     const next = state.imi && t.my ? '<p class="ty-next">このあと意味も打ちます</p>' : "";
     if (state.mode === "practice") {
@@ -279,7 +280,7 @@
       <p class="ty-desc big">${esc(masked(t))}</p>
       <p class="ty-kana"><span class="done">${esc(doneKana)}</span><span class="hint">${esc(shown.slice(state.kanaBuf.length))}</span>${"・".repeat(Math.max(0, left))}</p>
       <p class="ty-roma"><span class="done">${esc(state.typed)}</span></p>${next}
-      <p class="ty-keys"><button type="button" class="btn ghost" data-act="hint">ヒント（Enter）</button><button type="button" class="btn ghost" data-act="pass">パス（Esc）</button></p>`;
+      <p class="ty-keys"><button type="button" class="btn ghost" data-act="hint">ヒント（Enter）</button><button type="button" class="btn ghost" data-act="pass">パス（Tab）</button></p>`;
   }
   // 腕だめしでは、意味の中に答えの用語が出てきたら「〇〇」で隠す
   function masked(t) {
@@ -330,9 +331,19 @@
     </div>`;
   }
 
+  function countHtml() {
+    return `<div class="ty-count" aria-live="assertive">
+      <p class="ty-mode-name">${state.mode === "practice" ? "練習" : "腕だめし"}・${esc(state.field === "all" ? "すべて" : FIELDS[state.field])}・${state.sec / 60}分${state.imi ? "・意味も打つ" : ""}</p>
+      <b class="mono">${state.count}</b>
+      <p class="muted">ローマ字で打ちます（日本語入力のままでも打てます）。Esc でやめる</p>
+      <p class="ty-keys"><button type="button" class="btn ghost" data-act="quit">やめる（Esc）</button></p>
+    </div>`;
+  }
+
   function render() {
     let html;
     if (state.phase === "menu") html = menuHtml();
+    else if (state.phase === "count") html = countHtml();
     else if (state.phase === "result") html = resultHtml();
     else if (state.phase === "rank") html = rankHtml();
     else {
@@ -342,7 +353,7 @@
         ? `<p class="ty-passed">${esc(pt.term)} の意味: <b>${esc(pt.mt)}</b></p>`
         : `<p class="ty-passed">答え: <b>${esc(pt.term)}</b>（${esc(pt.y)}）${pt.mt ? `… ${esc(pt.mt)}` : ""}</p>`;
       html = `<div class="ty-play ${state.flash ? "f-" + state.flash : ""}">
-        <div class="ty-bar"><span>残り <b class="mono ty-left">${left}</b> 秒</span><span>点数 <b class="mono">${points()}</b></span><span><b class="mono">${state.words}</b> 語</span><span>ミス <b class="mono">${state.miss}</b></span></div>
+        <div class="ty-bar"><span>残り <b class="mono ty-left">${left}</b> 秒</span><span>点数 <b class="mono">${points()}</b></span><span><b class="mono">${state.words}</b> 語</span><span>ミス <b class="mono">${state.miss}</b></span><button type="button" class="btn ghost ty-quit" data-act="quit">やめる<span class="ty-esc">（Esc）</span></button></div>
         <div class="ty-time"><i style="width:${(left / state.sec) * 100}%"></i></div>
         ${passed}<div class="ty-word">${wordHtml()}</div>
         <p class="ty-keys muted">打つ欄が見えないときは、ここを押すとキーボードが出ます。</p>
@@ -351,11 +362,23 @@
     root.querySelector(".ty-view").innerHTML = html;
   }
 
+  // 3・2・1 のカウントダウンのあとに始める
   function start() {
+    clearInterval(state.timer); clearTimeout(state.countTimer);
+    state.phase = "count"; state.count = 3;
+    store("typing-pref", { mode: state.mode, field: state.field, sec: state.sec, imi: state.imi });
+    render(); focusInput();
+    const step = () => {
+      if (state.phase !== "count") return;
+      if (--state.count > 0) { render(); state.countTimer = setTimeout(step, 1000); } else begin();
+    };
+    state.countTimer = setTimeout(step, 1000);
+  }
+  function begin() {
     state.phase = "play"; state.deck = []; state.score = 0; state.words = 0; state.keys = 0; state.miss = 0; state.missedIds = new Set();
     state.newBest = false; state.passed = null; state.flash = "";
     rank.sent = null; rank.sendError = ""; rank.sending = false;
-    store("typing-pref", { mode: state.mode, field: state.field, sec: state.sec, imi: state.imi });
+    input.value = "";
     nextWord(); state.t0 = performance.now();
     clearInterval(state.timer);
     state.timer = setInterval(tick, 200);
@@ -368,6 +391,14 @@
     const l = root.querySelector(".ty-left"), bar = root.querySelector(".ty-time i");
     if (l) l.textContent = Math.ceil(ms / 1000);
     if (bar) bar.style.width = (ms / state.sec / 10) + "%";
+  }
+  // 途中でやめる（寿司打のように Esc ですぐ。記録は残さない）
+  function quit() {
+    if (state.phase !== "play" && state.phase !== "count") return;
+    const playing = state.phase === "play";
+    clearInterval(state.timer); clearTimeout(state.countTimer);
+    state.phase = "menu"; state.passed = null; input.value = ""; render();
+    if (playing && window.gtag) gtag("event", "typing_quit", { mode: state.mode, seconds: state.sec, left: Math.max(0, Math.ceil(state.sec - (performance.now() - state.t0) / 1000)) });
   }
   function end() {
     clearInterval(state.timer);
@@ -386,9 +417,24 @@
   const input = root.querySelector(".ty-input");
   function focusInput() { try { input.focus({ preventScroll: true }); } catch (e) { input.focus(); } }
   const toHira = (s) => s.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
+  // 全角の英数字・記号（ｋ・－ など）を半角に
+  const toHalf = (s) => s.replace(/[！-～]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
+  // 日本語入力がオンのときは、キーの位置から文字を決める（JIS 配列の Shift ＋ 数字の記号）
+  const JIS_SHIFT = { 1: "!", 2: '"', 3: "#", 4: "$", 5: "%", 6: "&", 7: "'", 8: "(", 9: ")" };
+  const CODE_KEYS = { Minus: "-", Period: ".", Slash: "/", Comma: ",", Semicolon: ";", Quote: ":" };
+  function charFromCode(e) {
+    let m = /^Key([A-Z])$/.exec(e.code);
+    if (m) return m[1].toLowerCase();
+    m = /^(?:Digit|Numpad)(\d)$/.exec(e.code);
+    if (m) return e.shiftKey ? JIS_SHIFT[m[1]] || "" : m[1];
+    return e.shiftKey ? "" : CODE_KEYS[e.code] || "";
+  }
+  let imeAt = -1e9;   // 日本語入力のキーを、キーの位置で打ったとき
 
   document.addEventListener("keydown", (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === "Escape" && (state.phase === "play" || state.phase === "count")) { e.preventDefault(); quit(); return; }
+    if (state.phase === "count") { if (e.key.length === 1 || e.key === "Process") e.preventDefault(); return; }
     if (state.phase !== "play") {
       if (e.key === "Enter" && e.target.classList && e.target.classList.contains("ty-name")) { e.preventDefault(); if (!rank.sending) sendRank(); return; }
       const tag = e.target === input ? "" : e.target.tagName;
@@ -397,18 +443,25 @@
       }
       return;
     }
-    if (e.key === "Escape") { e.preventDefault(); pass(); return; }
-    if (e.key === "Enter") { e.preventDefault(); hint(); return; }
-    if (e.key.length === 1 && /[ -~]/.test(e.key) && !e.isComposing) {
-      e.preventDefault(); feedKey(e.key.toLowerCase()); return;
+    if (e.key === "Tab") { e.preventDefault(); pass(); return; }
+    if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); hint(); return; }
+    // 日本語入力がオン（全角）: key が "Process" になるので、キーの位置で打つ。日本語入力の文字は、いったん欄から離れて捨てる
+    if (e.key === "Process" || e.isComposing) {
+      const c = charFromCode(e);
+      if (c) { e.preventDefault(); imeAt = performance.now(); feedKey(c); input.blur(); focusInput(); }
+      return;
     }
+    const k = e.key.length === 1 ? toHalf(e.key) : "";
+    if (/^[!-~]$/.test(k)) { e.preventDefault(); feedKey(k.toLowerCase()); }
   });
   // スマホのキーボード（keydown で文字がわからない）と、かな入力
   function takeInput() {
     const v = input.value; input.value = "";
+    // キーの位置で打った直後に日本語入力が作った文字（ｋ・か など）は、もう打ったので捨てる
+    if (state.phase !== "play" || performance.now() - imeAt < 600) return;
     for (const c of v) {
       if (/[ぁ-ゖァ-ヶー]/.test(c)) feedKana(toHira(c));
-      else if (/[ -~]/.test(c) && c !== " ") feedKey(c.toLowerCase());
+      else { const h = toHalf(c); if (/^[!-~]$/.test(h)) feedKey(h.toLowerCase()); }
     }
   }
   input.addEventListener("input", (e) => { if (!e.isComposing) takeInput(); });
@@ -416,7 +469,7 @@
 
   root.addEventListener("click", (e) => {
     const b = e.target.closest("button");
-    if (!b) { if (state.phase === "play") focusInput(); return; }
+    if (!b) { if (state.phase === "play" || state.phase === "count") focusInput(); return; }
     if (b.dataset.mode) { state.mode = b.dataset.mode; render(); }
     else if (b.dataset.field) { state.field = b.dataset.field; render(); }
     else if (b.dataset.sec) { state.sec = Number(b.dataset.sec); render(); }
@@ -428,6 +481,7 @@
     else if (b.dataset.act === "rank") { state.phase = "rank"; rank.tab = "week"; loadRank(); }
     else if (b.dataset.rtab) { rank.tab = b.dataset.rtab; render(); }
     else if (b.dataset.act === "send") sendRank();
+    else if (b.dataset.act === "quit") quit();
     else if (b.dataset.act === "pass") { pass(); focusInput(); }
     else if (b.dataset.act === "hint") { hint(); focusInput(); }
   });

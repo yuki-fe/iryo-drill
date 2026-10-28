@@ -329,6 +329,16 @@ p.ty-keys.muted { display: none; }
 .ty-missed li { break-inside: avoid; display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--line); padding: 4px 0; font-size: .9rem; }
 .ty-missed span { color: var(--muted); font-size: .8rem; }
 .ty-again { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 20px; }
+/* 用語タイピングのカウントダウン・やめる */
+.ty-count { min-height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; }
+.ty-count b { font-size: 6rem; line-height: 1; color: var(--mark); font-weight: 500; animation: ty-pop .9s ease-out; }
+.ty-count p { margin: 0; }
+@keyframes ty-pop { from { transform: scale(1.5); opacity: 0; } 30% { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .ty-count b { animation: none; } }
+.ty-bar { align-items: center; flex-wrap: wrap; }
+.ty-quit { margin-left: auto; padding: 2px 10px; font-size: .75rem; }
+@media (max-width: 480px) { .ty-bar { gap: 6px 12px; } }
+@media (hover: none) { .ty-esc { display: none; } }
 /* 用語タイピングの点数とランク */
 .ty-grade { align-self: center; margin-left: 10px; min-width: 2.2em; padding: 2px 10px; border-radius: 8px; border: 2px solid var(--mark); color: var(--mark); font-family: var(--f-display); font-weight: 700; font-size: 1.6rem; line-height: 1.2; }
 .ty-grade.g-S { background: var(--mark); color: var(--paper); }
