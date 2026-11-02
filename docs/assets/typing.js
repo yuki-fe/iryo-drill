@@ -3,7 +3,8 @@
    練習: 用語・読み・ローマ字・意味が出る。腕だめし: 意味だけを見て、用語を思い出して打つ。
    意味も打つ: 用語のあとに、意味の要点（terms.js の mt＝画面に出す文、my＝打つ読み）も打つ。データがないサイトでは出さない。
    制限時間は TIMES から選ぶ。始める前に 3・2・1 のカウントダウン。Esc でいつでもやめてメニューへ（記録は残さない）。
-   日本語入力（全角）のままでも打てる: キーの位置（e.code）から半角の文字に直し、日本語入力が作る文字は捨てる。
+   日本語入力（全角）のままでも打てる: PC では打つ欄にフォーカスを当てないので、日本語入力が働かない。
+   それでも key が "Process" で来たときは、キーの位置（e.code）から半角の文字に直し、日本語入力が作る文字は捨てる。
    点数 = 文字数 × 正確さ³ × 10。ランク（S〜D）は1分あたりの点数で決める（GRADES）。
    ランキング: #typing の data-rank（ranking/ranking.gs のウェブアプリの URL）と data-site があるときだけ出す。対象は BOARD の1つだけ。 */
 (function () {
@@ -307,7 +308,7 @@
       <p class="ty-best">${best && best.points ? `自己ベスト: <b>${best.points}点</b>（ランク${grade(best.points, state.sec)}・${best.chars}文字・正確さ${best.acc}%）` : "まだ記録はありません"}</p>
       ${RANK_URL ? `<p class="ty-rank-link"><button type="button" class="btn ghost" data-act="rank">ランキングを見る</button>${rankOn() ? '<span class="muted">この設定でランキングに挑戦できます</span>'
         : `<button type="button" class="btn ghost" data-act="useboard">ランキングの設定にする</button><span class="muted">ランキングは「${esc(BOARD.name)}」だけです</span>`}</p>` : ""}
-      <button type="button" class="btn primary ty-start" data-act="start">スタート（スペースキー）</button>
+      <button type="button" class="btn primary ty-start" data-act="start">スタート${TOUCH ? "" : "（スペースキー）"}</button>
       <p class="muted">${state.sec / 60}分で何語打てるか挑戦します。${state.imi ? "用語を打ったあとに、意味の要点も打ちます。" : ""}ローマ字入力は半角英数で打ってください（スマホは、ひらがなのキーボードでも打てます）。</p>
     </div>`;
   }
@@ -327,7 +328,7 @@
         <div><dt>ミス</dt><dd>${state.miss}<small>回</small></dd></div><div><dt>1秒あたり</dt><dd>${kps}<small>打鍵</small></dd></div><div><dt>正確さ</dt><dd>${acc}<small>%</small></dd></div></dl>
       ${sendHtml()}
       ${missed.length ? `<h2>ミス・パスした用語（${missed.length}語）</h2><ul class="ty-missed">${list}</ul>` : ""}
-      <p class="ty-again"><button type="button" class="btn primary" data-act="start">もう一度（スペースキー）</button><button type="button" class="btn" data-act="menu">遊び方・分野を変える</button></p>
+      <p class="ty-again"><button type="button" class="btn primary" data-act="start">もう一度${TOUCH ? "" : "（スペースキー）"}</button><button type="button" class="btn" data-act="menu">遊び方・分野を変える</button></p>
     </div>`;
   }
 
@@ -408,6 +409,13 @@
     if (pt && (!best || !best.points || pt > best.points)) {
       store(bestKey(), { points: pt, chars: state.score, words: state.words, acc: Math.round(accuracy() * 100) }); state.newBest = true;
     }
+    // 日ごとの学習の数（ホームの「〇日つづけています」に使う。app.js と同じ形）。打てた用語の数を足す
+    if (state.words) {
+      const d = new Date(), k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const log = load("study-log", {});
+      log[k] = Object.assign({ a: 0, k: 0 }, log[k]); log[k].a += state.words;
+      store("study-log", log);
+    }
     state.phase = "result"; render();
     if (window.gtag) gtag("event", "typing_finish", { mode: state.mode, field: state.field, seconds: state.sec, meaning: state.imi ? 1 : 0, words: state.words, score: state.score, points: points() });
   }
@@ -415,7 +423,13 @@
   // ---------- 入力 ----------
   root.innerHTML = `<div class="ty-view"></div><input class="ty-input" type="text" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="ここに打つ">`;
   const input = root.querySelector(".ty-input");
-  function focusInput() { try { input.focus({ preventScroll: true }); } catch (e) { input.focus(); } }
+  // PC では打つ欄にフォーカスを当てない（日本語入力が働かず、オンのままでも半角の文字が keydown に来る）。
+  // 欄に当てて日本語入力をからめると、ブラウザごと固まることがあった。スマホはキーボードを出すために当てる
+  const TOUCH = window.matchMedia && matchMedia("(pointer: coarse)").matches;
+  function focusInput() {
+    if (!TOUCH) { if (document.activeElement === input) input.blur(); return; }
+    try { input.focus({ preventScroll: true }); } catch (e) { input.focus(); }
+  }
   const toHira = (s) => s.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
   // 全角の英数字・記号（ｋ・－ など）を半角に
   const toHalf = (s) => s.replace(/[！-～]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
@@ -445,10 +459,10 @@
     }
     if (e.key === "Tab") { e.preventDefault(); pass(); return; }
     if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); hint(); return; }
-    // 日本語入力がオン（全角）: key が "Process" になるので、キーの位置で打つ。日本語入力の文字は、いったん欄から離れて捨てる
+    // 日本語入力がオン（全角）: key が "Process" になるので、キーの位置で打つ。日本語入力が作った文字は takeInput で捨てる
     if (e.key === "Process" || e.isComposing) {
       const c = charFromCode(e);
-      if (c) { e.preventDefault(); imeAt = performance.now(); feedKey(c); input.blur(); focusInput(); }
+      if (c) { e.preventDefault(); imeAt = performance.now(); feedKey(c); }
       return;
     }
     const k = e.key.length === 1 ? toHalf(e.key) : "";

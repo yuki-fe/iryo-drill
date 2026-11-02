@@ -4,6 +4,7 @@
 入力:    config.json（サイトの設定）、data/terms.json（用語。data/make_terms.py が作る）、static/（CSS・JS）
 出力:    docs/（GitHub Pages でそのまま公開できる）
 """
+import hashlib
 import json
 import random
 import re
@@ -28,6 +29,7 @@ BASE = config["base_url"].rstrip("/")
 SITE = config["site_name"]
 SISTERS = config.get("sisters", [])
 TODAY = date.today().isoformat()
+LASTMOD_FILE = ROOT / "data" / "lastmod.json"   # sitemap の lastmod（ページ → [中身のハッシュ, 変わった日]）
 # 用語の読み（タイピングで打つ文字）。用語 id → ひらがな・英数字
 YOMI = json.loads((ROOT / "data" / "yomi.json").read_text(encoding="utf-8")) if (ROOT / "data" / "yomi.json").exists() else {}
 # 意味の要点（タイピングの「意味も打つ」で打つ）。用語 id → [画面に出す文, 打つ読み]
@@ -547,7 +549,7 @@ def build_privacy():
   <p>{contact_html()}</p>
   <h2>改定</h2>
   <p>このページの内容は、必要に応じて予告なく変更することがあります。</p>
-  <p class="muted">制定日: {escape(config.get("established", ""))} / 最終更新日: {TODAY}</p>
+  <p class="muted">制定日: {escape(config.get("established", ""))} / 最終更新日: {escape(config.get("privacy_updated") or config.get("established", ""))}</p>
 </main>
 """
     page("privacy.html", f"プライバシーポリシー・免責事項｜{SITE}", f"{SITE}のプライバシーポリシーと免責事項です。", body, "")
@@ -566,7 +568,18 @@ def build_404():
 
 def build_meta_files():
     sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-    sitemap += "".join(f"  <url><loc>{escape(u)}</loc><lastmod>{TODAY}</lastmod></url>\n" for u in SITEMAP)
+    # lastmod: ページの中身（年を除く）が前のビルドと変わった日だけ新しくする（data/lastmod.json に記録）
+    old = json.loads(LASTMOD_FILE.read_text(encoding="utf-8")) if LASTMOD_FILE.exists() else {}
+    new = {}
+    for u in SITEMAP:
+        path = u[len(BASE) + 1:] or "index.html"
+        html = (OUT / path).read_text(encoding="utf-8").replace(f"© {date.today().year}", "")
+        html = re.sub(r"\?v=[0-9a-f]+", "", html)
+        h = hashlib.sha1(html.encode("utf-8")).hexdigest()[:12]
+        new[path] = [h, old[path][1] if path in old and old[path][0] == h else TODAY]
+    if new != old:
+        LASTMOD_FILE.write_text("{\n" + ",\n".join(f"{json.dumps(k)}: {json.dumps(v)}" for k, v in new.items()) + "\n}\n", encoding="utf-8")
+    sitemap += "".join(f"  <url><loc>{escape(u)}</loc><lastmod>{new[u[len(BASE) + 1:] or 'index.html'][1]}</lastmod></url>\n" for u in SITEMAP)
     sitemap += "</urlset>\n"
     (OUT / "sitemap.xml").write_text(sitemap, encoding="utf-8")
     (OUT / "robots.txt").write_text(f"User-agent: *\nAllow: /\n\nSitemap: {BASE}/sitemap.xml\n", encoding="utf-8")
