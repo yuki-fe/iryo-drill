@@ -36,6 +36,11 @@ YOMI = json.loads((ROOT / "data" / "yomi.json").read_text(encoding="utf-8")) if 
 IMI = {k: v for k, v in json.loads((ROOT / "data" / "imi.json").read_text(encoding="utf-8")).items() if not k.startswith("_")} \
     if (ROOT / "data" / "imi.json").exists() else {}
 ABBRS = [t for t in terms if t.get("abbr")]
+# 用語ページの本文（覚え方・仕事での使われ方・似た用語との違い）。用語 id → {"oboe", "exam", "diff": [{"id", "text"}]}
+DETAIL = {k: v for k, v in json.loads((ROOT / "data" / "detail.json").read_text(encoding="utf-8")).items() if not k.startswith("_")} \
+    if (ROOT / "data" / "detail.json").exists() else {}
+# 似た用語を比べるページ（compare/<slug>.html）。slug は URL になるので公開後に変えない
+COMPARE = json.loads((ROOT / "data" / "compare.json").read_text(encoding="utf-8")) if (ROOT / "data" / "compare.json").exists() else []
 
 
 # ---------- 用語の文字列処理 ----------
@@ -274,7 +279,7 @@ def build_home():
   <h2>収録している分野</h2>
   <p>医療事務の仕事で使う知識を、7つの分野に分けています。特定の試験の範囲に合わせたものではありませんが、医療事務の資格の勉強にも使えます。診療報酬の点数は、改定（原則2年に1度）で変わるので、このサイトでは点数を書かずに、しくみと用語の意味を説明しています。</p>
   <ul class="field-list">{field_links}</ul>
-  <p>すべての用語は<a href="terms/index.html">用語一覧</a>から、1語ずつ解説ページで読めます。</p>
+  <p>すべての用語は<a href="terms/index.html">用語一覧</a>から、1語ずつ解説ページで読めます。初診料と再診料、返戻と査定のようなまぎらわしい用語は、<a href="compare/index.html">似た用語の違い</a>で表にして比べられます。</p>
   {sisters}
   <p class="muted">制度の数字（自己負担の割合など）は、2026年10月時点の決まりです。医療保険や診療報酬の制度は改定されるので、実際の業務や受験の前には、最新の情報を確認してください。</p>
 </section>
@@ -315,6 +320,86 @@ def mini_quiz(t, related):
   </section>"""
 
 
+TERM_BY_ID = {t["id"]: t for t in terms}
+
+
+def detail_sections(t, rel_terms=""):
+    """data/detail.json の本文（覚え方・仕事での使われ方・似た用語との違い）。rel_terms は用語ページへの相対パス。"""
+    d = DETAIL.get(t["id"])
+    if not d:
+        return ""
+    out = ""
+    if d.get("oboe"):
+        out += f'<section class="detail"><h2>覚え方</h2><p>{escape(d["oboe"])}</p></section>'
+    if d.get("exam"):
+        out += f'<section class="detail"><h2>仕事での使われ方</h2><p>{escape(d["exam"])}</p></section>'
+    if d.get("diff"):
+        items = "".join(f'<dt><a href="{rel_terms}{x["id"]}.html">{escape(TERM_BY_ID[x["id"]]["term"])}</a>との違い</dt><dd>{escape(x["text"])}</dd>'
+                        for x in d["diff"] if x["id"] in TERM_BY_ID)
+        out += f'<section class="detail"><h2>似た用語との違い</h2><dl class="diff-list">{items}</dl></section>'
+    return out
+
+
+def faq_html(items):
+    """よくある質問（本文の Q&A）。items は [(質問, 答えの HTML)]。"""
+    return ('<section class="faq"><h2>よくある質問</h2>'
+            + "".join(f'<details><summary>{escape(q)}</summary><div>{a}</div></details>' for q, a in items) + "</section>")
+
+
+def build_compare():
+    """似た用語を比べるページ（compare/<slug>.html）と一覧。"""
+    if not COMPARE:
+        return
+    cards = "".join(f'<li><a href="{c["slug"]}.html">{escape(c["title"])}</a><p>{escape(c["summary"])}</p></li>' for c in COMPARE)
+    body = f"""
+<main class="prose wide">
+  {crumbs("../", ("似た用語の違い", None))}
+  <h1>似た用語の違い<small>医療事務でまぎらわしい用語 {len(COMPARE)}組</small></h1>
+  <p>医療事務の仕事では、名前や役割の似た制度・用語を正しく使い分けることが大切です。2つ（3つ以上）の用語を表で並べて、どこが違うかを確かめましょう。</p>
+  <ul class="term-list">{cards}</ul>
+  <p><a href="../terms/index.html">用語一覧（{len(terms)}語）へ</a></p>
+</main>
+"""
+    page("compare/index.html", f"似た用語の違い（{len(COMPARE)}組）｜医療事務の用語｜{SITE}",
+         f"医療事務でまぎらわしい用語{len(COMPARE)}組（初診料と再診料、返戻と査定、支払基金と国保連など）の違いを、表で比べてまとめました。",
+         body, "../", "", [breadcrumb_ld([("ホーム", BASE + "/"), ("似た用語の違い", f"{BASE}/compare/index.html")])])
+    for c in COMPARE:
+        ts = [TERM_BY_ID[i] for i in c["terms"]]
+        head, *rows = c["table"]
+        table = ('<div class="table-scroll"><table class="cmp-table"><thead><tr>' + "".join(f"<th scope=\"col\">{escape(h)}</th>" for h in head)
+                 + "</tr></thead><tbody>" + "".join("<tr>" + f'<th scope="row">{escape(r[0])}</th>' + "".join(f"<td>{escape(x)}</td>" for x in r[1:]) + "</tr>" for r in rows)
+                 + "</tbody></table></div>")
+        terms_html = "".join(f'<li><a href="../terms/{x["id"]}.html">{escape(x["term"])}</a><p>{escape(x["desc"])}</p></li>' for x in ts)
+        others = "".join(f'<li><a href="{o["slug"]}.html">{escape(o["title"])}</a></li>' for o in COMPARE if o is not c)
+        body = f"""
+<main class="prose">
+  {crumbs("../", ("似た用語の違い", "index.html"), (c["title"], None))}
+  <p class="eyebrow">似た用語を比べる</p>
+  <h1>{escape(c["title"])}</h1>
+  <p class="lead">{escape(c["summary"])}</p>
+  <h2>表で比べる</h2>
+  {table}
+  <h2>見分けるポイント</h2>
+  <ul>{"".join(f"<li>{escape(p)}</li>" for p in c["points"])}</ul>
+  <h2>仕事での使われ方</h2>
+  <p>{escape(c["exam"])}</p>
+  <h2>それぞれの用語</h2>
+  <ul class="term-list">{terms_html}</ul>
+  <div class="cta-row">
+    <a class="btn primary" href="../index.html#quiz">{icon("cards")}4択クイズで確かめる</a>
+    <a class="btn" href="../index.html#card">カードで練習</a>
+  </div>
+  {pr_box()}
+  <h2>ほかの比べる用語</h2>
+  <ul class="b-links inline">{others}</ul>
+</main>
+"""
+        url = f"{BASE}/compare/{c['slug']}.html"
+        page(f"compare/{c['slug']}.html", f"{c['title']}を表で比較｜医療事務の用語｜{SITE}",
+             (c["summary"] if len(c["summary"]) <= 120 else c["summary"][:119] + "…"), body, "../", "",
+             [breadcrumb_ld([("ホーム", BASE + "/"), ("似た用語の違い", f"{BASE}/compare/index.html"), (c["title"], url)])])
+
+
 def build_term(t, prev, nxt):
     field = FIELDS[t["field"]]
     rel = related_terms(t)
@@ -324,6 +409,11 @@ def build_term(t, prev, nxt):
     pager += f'<a href="{nxt["id"]}.html" rel="next" class="next"><small>次の用語</small>{escape(nxt["term"])}</a>' if nxt else "<span></span>"
     pager += "</nav>"
     abbr = f'<p class="abbr-full"><span>正式名</span><span lang="en">{escape(t["abbr"])}</span></p>' if t.get("abbr") else ""
+    detail_html = detail_sections(t)
+    cmps = [c for c in COMPARE if t["id"] in c["terms"]]
+    cmp_html = ('<section class="side-card"><h2>比べて覚える</h2><ul class="b-links">'
+                + "".join(f'<li><a href="../compare/{c["slug"]}.html">{escape(c["title"])}</a></li>' for c in cmps)
+                + "</ul></section>") if cmps else ""
     abbr_cta = '<a class="btn" href="../abbr.html">略語クイズに挑戦</a>' if t.get("abbr") else '<a class="btn" href="../index.html#type">書いて答える問題に挑戦</a>'
     body = f"""
 <div class="term-wrap">
@@ -338,6 +428,7 @@ def build_term(t, prev, nxt):
         <a class="btn primary" href="../index.html#card">{icon("cards")}カードで練習</a>
         {abbr_cta}
       </div>
+      {detail_html}
       {mini_quiz(t, rel)}
       {pr_box()}
       {pager}
@@ -354,6 +445,7 @@ def build_term(t, prev, nxt):
         <h2>同じ分野の用語</h2>
         <ul class="related">{related_html}</ul>
       </section>
+      {cmp_html}
     </aside>
   </div>
 </div>
@@ -364,9 +456,14 @@ def build_term(t, prev, nxt):
          "inDefinedTermSet": {"@type": "DefinedTermSet", "name": f"{SITE} 医療事務 用語集", "url": f"{BASE}/terms/index.html"}},
         breadcrumb_ld([("ホーム", BASE + "/"), (field, f"{BASE}/terms/index.html#{t['field']}"), (t["term"], url)]),
     ]
-    short = t["desc"] if len(t["desc"]) <= 100 else t["desc"][:99] + "…"
-    page(f"terms/{t['id']}.html", f"{t['term']}とは？意味と覚え方｜医療事務の用語｜{SITE}",
-         f"{t['term']}（{field}・{t['sub']}）: {short}", body, "../", "", ld, '<script src="../assets/term.js"></script>')
+    d = DETAIL.get(t["id"], {})
+    desc = f"{t['term']}（{field}・{t['sub']}）: {t['desc']}"
+    if d.get("oboe"):
+        desc += "【覚え方】" + d["oboe"]
+    desc = desc if len(desc) <= 120 else desc[:119] + "…"
+    title = f"{t['term']}とは？意味と覚え方" if d.get("oboe") else f"{t['term']}とは？意味をわかりやすく"
+    page(f"terms/{t['id']}.html", f"{title}｜医療事務の用語｜{SITE}",
+         desc, body, "../", "", ld, '<script src="../assets/term.js"></script>')
 
 
 def build_index():
@@ -387,8 +484,16 @@ def build_index():
   <h1>医療事務の用語一覧<small>{len(terms)}語</small></h1>
   <p>医療事務の用語を、分野ごとに並べています。用語名から解説ページに進めます。</p>
   <ul class="field-list">{''.join(toc)}</ul>
+  {f'<p>まぎらわしい用語は<a href="../compare/index.html">似た用語の違い（{len(COMPARE)}組）</a>で、表で比べられます。</p>' if COMPARE else ''}
   {pr_box()}
   {''.join(sections)}
+  {faq_html([
+      ("用語はどの順番で覚えればいいですか？", "<p>はじめて学ぶ人は、「医療保険のしくみ」から始めるのがおすすめです。保険者・被保険者や自己負担のしくみがわかると、診療報酬やレセプトの用語が理解しやすくなります。そのあと「診療報酬のしくみ」「レセプトと窓口」へ進み、「医学の基礎」「カルテの略語」は少しずつ並行して覚えましょう。ホームの「学習する」で分野を選ぶと、その分野だけで練習できます。</p>"),
+      ("意味を読んでもすぐ忘れてしまいます。", "<p>読むだけより、思い出す練習のほうが記憶に残ります。カードで用語を思い出し、4択や「書いて答える」で確かめ、間違えた用語は「復習」でくり返しましょう。<a href=\"../typing.html\">用語タイピング</a>で手を動かして覚える方法もあります。</p>"),
+      ("似た用語の区別がつきません。", "<p>医療事務では、返戻と査定、支払基金と国保連のように、名前や役割の似た用語を使い分ける場面がよくあります。<a href=\"../compare/index.html\">似た用語の違い</a>で表にして比べると、見分けるポイントがつかめます。用語ページの「似た用語との違い」もあわせて読んでください。</p>"),
+      ("カルテの略語はどう覚えればいいですか？", "<p>Rp・do・p.o.・i.v. などの略語は、<a href=\"../abbr.html\">略語クイズ</a>で正式名と意味をセットで覚えるのがおすすめです。i.v.（静脈）・i.m.（筋肉）・s.c.（皮膚の下）のように、もとの英語やラテン語の言葉と結びつけると覚えやすくなります。</p>"),
+      ("診療報酬の点数は載っていますか？", "<p>載せていません。診療報酬の点数は改定（原則2年に1度）で変わるので、このサイトでは点数を書かずに、しくみと用語の意味を説明しています。実際の算定では、最新の点数表や厚生労働省の資料で確かめてください。なお、このサイトは特定の試験の範囲に合わせたものではありません。</p>"),
+  ])}
 </main>
 """
     page("terms/index.html", f"医療事務の用語一覧（{len(terms)}語）｜{SITE}",
@@ -637,6 +742,22 @@ def check():
             errors.append(f"{t['id']} {t['term']} の意味の要点の形か読みがおかしい: {m}")
     for k in set(IMI) - set(ids):
         warnings.append(f"data/imi.json の {k} は、用語にない id です")
+    # 用語ページの本文と、比べるページ
+    for k, d in DETAIL.items():
+        if k not in ids:
+            errors.append(f"data/detail.json の {k} は、用語にない id です")
+        for x in d.get("diff", []):
+            if x.get("id") not in ids or not x.get("text"):
+                errors.append(f"data/detail.json の {k} の diff がおかしい: {x}")
+    cslugs = [c["slug"] for c in COMPARE]
+    for c in COMPARE:
+        if cslugs.count(c["slug"]) > 1 or not re.fullmatch(r"[a-z0-9-]+", c["slug"]):
+            errors.append(f"data/compare.json の slug が重複しているか、使えない文字があります: {c['slug']}")
+        for i in c["terms"]:
+            if i not in ids:
+                errors.append(f"data/compare.json の {c['slug']}: 用語 id {i} がありません")
+        if any(len(r) != len(c["table"][0]) for r in c["table"]):
+            errors.append(f"data/compare.json の {c['slug']}: 表の列の数がそろっていません")
     if "YOUR-NAME" in BASE:
         warnings.append("config.json の base_url が仮の値のままです（公開するURLに変えてください）")
     if not config.get("operator"):
@@ -661,6 +782,7 @@ def main():
     build_index()
     for i, t in enumerate(terms):
         build_term(t, terms[i - 1] if i > 0 else None, terms[i + 1] if i + 1 < len(terms) else None)
+    build_compare()
     build_test()
     build_typing()
     build_abbr()

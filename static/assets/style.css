@@ -374,3 +374,24 @@ p.ty-keys.muted { display: none; }
   .ty-missed { columns: 1; }
 }
 @media (prefers-reduced-motion: reduce) { .ty-play.f-ng { animation: none; } }
+
+/* 用語ページの本文（覚え方・仕事での使われ方・似た用語との違い）と、比べるページ・よくある質問 */
+.detail p { line-height: 1.85; }
+.diff-list { margin: 0; }
+.diff-list dt { font-weight: 700; margin-top: 12px; }
+.diff-list dd { margin: 4px 0 0; padding-left: 12px; border-left: 3px solid var(--mark-soft); color: var(--ink); }
+.cmp-table { border-collapse: collapse; width: 100%; min-width: 480px; font-size: .92rem; background: var(--paper); }
+.cmp-table th, .cmp-table td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+.cmp-table thead th { background: var(--mark-soft); }
+.cmp-table tbody th { background: var(--bg); font-weight: 700; white-space: nowrap; }
+.faq details { border-top: 1px solid var(--line); padding: 12px 0; }
+.faq details:last-child { border-bottom: 1px solid var(--line); }
+.faq summary { font-weight: 700; cursor: pointer; }
+.faq details > div { margin-top: 8px; }
+.faq details p { margin: 0; }
+/* 「比べて覚える」と「ほかの比べる用語」のリンクの一覧（FE の科目Bのものと同じ） */
+.b-links { list-style: none; padding: 0 !important; }
+.b-links li { padding: 6px 0; border-top: 1px solid var(--line); }
+.b-links li:first-child { border-top: 0; }
+.b-links.inline { display: flex; flex-direction: row !important; flex-wrap: wrap; gap: 6px 16px !important; }
+.b-links.inline li { border: 0; padding: 0; }
